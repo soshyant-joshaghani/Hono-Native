@@ -1,0 +1,19 @@
+{
+  "name": "hono-native",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "backend/contracts",
+    "backend"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @hono-svelte/backend",
+    "dev:worker": "npm run worker -w @hono-svelte/backend",
+    "build:contracts": "npm run build -w @hono-svelte/contracts",
+    "build:backend": "npm run build -w @hono-svelte/backend",
+    "test": "npm run test -w @hono-svelte/backend"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

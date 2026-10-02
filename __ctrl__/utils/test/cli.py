@@ -1,0 +1,88 @@
+"""hono-native-ctrl test."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+from utils.dev.cli import _setup_local, _tool_argv, PROJECT
+
+CTRL = "hono-native-ctrl"
+
+
+def _run(argv_name: str, args: list[str], cwd) -> int:
+    argv = _tool_argv(argv_name, *args)
+    if not argv:
+        return 1
+    print(f"[hono-native] {' '.join(argv)}")
+    import subprocess
+    proc = subprocess.run(argv, cwd=cwd)
+    return proc.returncode
+
+
+def _run_backend() -> int:
+    print("[hono-native] Backend tests (vitest, in-memory Postgres)")
+    return _run("npm", ["run", "test", "-w", "@hono-svelte/backend"], PROJECT)
+
+
+def _run_frontend() -> int:
+    from utils.web.store import locked_kit, read_lock
+
+    if read_lock() is None:
+        print("[hono-native] No web kit installed. Skipping frontend tests (hono-native-ctrl web use svelte).")
+        return 0
+    kit = locked_kit()
+    if kit["runtime"] != "node":
+        print(f"[hono-native] {kit['label']} has no Vitest suite in this repo. Skipping frontend tests.")
+        return 0
+    front = PROJECT / "frontend" / "web"
+    if not (front / "package.json").is_file():
+        print("[hono-native] frontend/web is empty. Install it with: hono-native-ctrl web use svelte")
+        return 0
+    if not (front / "node_modules").is_dir():
+        code = _run("npm", ["install"], front)
+        if code != 0:
+            return code
+    print("[hono-native] Frontend check (svelte-check)")
+    return _run("npm", ["run", "check"], front)
+
+
+def _run_contract(args: argparse.Namespace) -> int:
+    import subprocess
+
+    script = PROJECT / "tests" / "contract" / "contract_test.py"
+    if not script.is_file():
+        print(f"error: missing {script}", file=sys.stderr)
+        return 1
+    cmd = [sys.executable, str(script), "--base", args.base, "--local", "--jobs"]
+    print("[contract] " + " ".join(cmd))
+    return subprocess.run(cmd, cwd=PROJECT).returncode
+
+
+def cmd_test(args: argparse.Namespace) -> int:
+    if args.target == "contract":
+        return _run_contract(args)
+    code = _setup_local(force_install=False)
+    if code != 0:
+        return code
+    target = args.target
+    if target in ("backend", "all"):
+        code = _run_backend()
+        if code != 0:
+            print("Backend tests failed.", file=sys.stderr)
+            return code
+    if target in ("frontend", "all"):
+        code = _run_frontend()
+        if code != 0:
+            print("Frontend tests failed.", file=sys.stderr)
+            return code
+    if target == "all":
+        print("\nAll tests passed.")
+    return 0
+
+
+def build_test_subparser(sub: argparse._SubParsersAction) -> None:
+    sp = sub.add_parser("test", help="Run backend and frontend tests")
+    sp.add_argument("target", nargs="?", default="all", choices=("all", "backend", "frontend", "contract"))
+    sp.add_argument("--base", default="http://localhost:8000", help="API origin for `test contract`")
+    sp.set_defaults(func=cmd_test)
