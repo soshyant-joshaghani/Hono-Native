@@ -1,0 +1,16 @@
+{
+  "kits": [
+    {
+      "id": "svelte",
+      "label": "Hono-Svelte",
+      "source": "../hono-svelte/frontend",
+      "repo": "https://github.com/soshyant-joshaghani/Hono-Svelte.git",
+      "github": "soshyant-joshaghani/Hono-Svelte",
+      "branch": "main",
+      "runtime": "node",
+      "dev": ["npm", "run", "dev"],
+      "cwd": "frontend/web",
+      "scaffold": "svelte"
+    }
+  ]
+}

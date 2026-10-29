@@ -1,0 +1,41 @@
+# CLI
+
+```bat
+__ctrl__\hono-native-ctrl.bat <command>
+```
+
+```bash
+__ctrl__/hono-native-ctrl.sh <command>
+```
+
+| Command | Effect |
+|---------|--------|
+| `setup-local` | Require Node 22, copy `.env` if missing, `npm install` (workspace), build `backend/contracts` |
+| `dev run all` | Postgres, Redis, Traefik, Adminer, API (applies the SQL migrations), worker, Vite |
+| `dev run all --slim` | Same without Redis and the worker |
+| `dev run infra` | Containers only |
+| `dev run apps` | API, worker, Vite. Pair with infra already running |
+| `dev stop all` | Stop host processes, then `docker compose stop` |
+| `test all` | Backend Vitest, then frontend Vitest and `svelte-check` |
+| `test backend` | API tests on PGlite (in-memory Postgres) |
+| `test frontend` | Frontend Vitest and `svelte-check` |
+| `test contract [--base URL]` | `tests/contract/contract_test.py` against a running API (default `http://localhost:8000`, `--local --jobs`). Not part of `test all` |
+| `app create <name>` | Module stub. Mount the router in `backend/src/app.ts` yourself |
+| `prod start` | `docker compose -f compose.yml up -d --build` |
+| `prod stop` | Stop the production compose project |
+
+Logs for host processes: `__ctrl__/.run/*.log` (gitignored).
+
+Set a real `SECRET_KEY` and database password before `prod start`. `ENVIRONMENT=production` rejects `SECRET_KEY` and `FIRST_SUPERUSER_PASSWORD` set to `changethis`.
+
+## Seed
+
+Demo data through the public APIs (idempotent, no raw SQL):
+
+```bat
+hono-native-ctrl.bat seed all --api http://api.localhost
+hono-native-ctrl.bat seed users
+hono-native-ctrl.bat seed all --purge
+```
+
+Packs: `users`, `notes`. Auth is `FIRST_SUPERUSER` from `.env`; non-local APIs need `--allow-remote`. See [`utils/seed/README.md`](../__ctrl__/utils/seed/README.md).
